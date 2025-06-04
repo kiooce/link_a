@@ -127,32 +127,47 @@ def divergence_free_loss(pred_u, pred_v, lat, lon):
     return div_loss
 
 
-# Loss function combining MAE, divergence-free constraint, and other physical constraints
 def aurora_loss(pred_batch, true_batch, reg_weight_div, lat, lon):
-    # MAE loss between predicted and true variables
-    mae_loss = torch.nn.L1Loss()
+    # 假设你关心的站点位置如下（注意：这是你需要根据自己数据设置的！）
+    stations = [(3, 4), (6, 7), (1, 10), (10, 2), (8, 8)]  # 举例子
+    radius = 1  # 权重影响半径
+
+    def create_weight_mask(shape, stations, radius=1, high=1.0, low=0.1):
+        """
+        创建加权mask：五个站点周边权重为 high，其他地方为 low
+        shape: [1, 1, H, W]
+        """
+        mask = torch.ones(shape) * low
+        for (i, j) in stations:
+            i_start, i_end = max(0, i-radius), i+radius+1
+            j_start, j_end = max(0, j-radius), j+radius+1
+            mask[:, :, i_start:i_end, j_start:j_end] = high
+        return mask
+
+    def weighted_mae(pred, true, weight):
+        return torch.mean(weight * torch.abs(pred - true))
+
     total_surf_loss = 0.0
     total_atmos_loss = 0.0
 
-    # Loop over all surface variables in the Batch object
     for var in pred_batch.surf_vars:
-        total_surf_loss += mae_loss(pred_batch.surf_vars[var].float(), true_batch.surf_vars[var].float())
+        pred = pred_batch.surf_vars[var].float()
+        true = true_batch.surf_vars[var].float()
+        # pred.shape = [1, 1, H, W]
+        weight = create_weight_mask(pred.shape, stations).to(pred.device)
+        total_surf_loss += weighted_mae(pred, true, weight)
 
-    # Loop over all atmospheric variables in the Batch object
     for var in pred_batch.atmos_vars:
-        total_atmos_loss += mae_loss(pred_batch.atmos_vars[var].float(), true_batch.atmos_vars[var].float())
+        pred = pred_batch.atmos_vars[var].float()
+        true = true_batch.atmos_vars[var].float()
+        # 默认不加权，或自行添加权重机制
+        total_atmos_loss += torch.nn.functional.l1_loss(pred, true)
 
-    # Physical loss: Enforce wind fields to be divergence-free
-    # div_free_loss = divergence_free_loss(pred_batch.atmos_vars["u"].float(), pred_batch.atmos_vars["v"].float(), lat, lon)
-    div_free_loss = 0 # we dont have u and v in atmos_vars
+    div_free_loss = 0  # 目前不使用
 
-    # Additional physics-based loss (L_PHYS): Could include other physical constraints
-    # Placeholder: Modify to add relevant physical constraints from the Aurora paper
-    # phys_loss = compute_physical_loss(pred_batch)
-
-    # Total loss: surface loss, atmospheric loss, and physical constraint loss
     total_loss = total_surf_loss + total_atmos_loss + reg_weight_div * div_free_loss
     return total_loss
+
 
 
 if __name__ == '__main__':
