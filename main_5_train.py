@@ -107,8 +107,8 @@ def evaluation(model, X_batch, y_batch, device):
 
     all_preds = all_preds.cpu().detach().numpy()
     all_labels = all_labels.cpu().detach().numpy()
-    np.save('all_preds_aurora.npy', all_preds)
-    np.save('all_labels_aurora.npy', all_labels)
+    np.save('preds_a5.npy', all_preds)
+    np.save('labels_a5.npy', all_labels)
 
     print(f'Mean Squared Error: {mse.item()}')
 
@@ -215,7 +215,7 @@ if __name__ == '__main__':
 
     model.load_checkpoint("microsoft/aurora", "aurora-0.25-pretrained.ckpt", strict=False)
 
-    device = 'cuda'
+    device = 'cuda:1'
     model = model.to(device)
 
     try:
