@@ -162,11 +162,8 @@ def evaluation(model, X_batch, y_batch, device):
         pred_pm25_flat = all_preds[i][0, 2].cpu().numpy()
         true_pm25_flat = all_labels[i][0, 2].cpu().numpy()
 
-        pred_pm25 = pred_pm25_flat.reshape(12, 12)
-        true_pm25 = true_pm25_flat.reshape(12, 12)
-
-        pred_point_values.append(pred_pm25[6, 6])
-        true_point_values.append(true_pm25[6, 6])
+        pred_point_values.append(pred_pm25_flat.item())
+        true_point_values.append(true_pm25_flat.item())
 
     plt.plot(pred_point_values, label="Predicted")
     plt.plot(true_point_values, label="True")
@@ -212,7 +209,6 @@ def aurora_loss(pred_batch, true_batch, reg_weight_div, lat, lon):
 
 if __name__ == '__main__':
     torch.set_num_threads(4)
-    print("X_batch[0].surf_vars['pm25'].shape")
 
     filename_weather = "5站点气象数据20231001-1231.xlsx"
     filename_airquality = "5站点202309-10月空气质量数据.xlsx"
