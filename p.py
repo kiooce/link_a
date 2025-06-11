@@ -30,7 +30,7 @@ def main(model, X_batch, y_batch, device):
     model.configure_activation_checkpointing()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
-    num_epochs = 1
+    num_epochs = 10
     
     # Track losses and MSEs
     epoch_losses = []
@@ -116,7 +116,6 @@ def main(model, X_batch, y_batch, device):
 
 
 def evaluation(model, X_batch, y_batch, device):
-
     model.eval()
 
     all_preds = []
@@ -127,14 +126,11 @@ def evaluation(model, X_batch, y_batch, device):
             X, y = X_batch[i], y_batch[i]
             pred = model.forward(X)
 
-            # 最简单的方法应该是把Batch转为tensor, 然后用mse_loss计算
-            # shape => [1, 7, 2, 2].repeat(1, 1, 6, 6)
-            # "2t", "pm10", "pm25", "so2", "no2", "o3", "q"
-            pred_tensor = torch.cat([pred.surf_vars['2t'][:,:,:,:].reshape([1, 1, 144]), 
-                                    pred.surf_vars['pm10'][:,:,:,:].reshape([1, 1, 144]), 
+            pred_tensor = torch.cat([pred.surf_vars['2t'][:,:,:,:].reshape([1, 1, 144]),
+                                    pred.surf_vars['pm10'][:,:,:,:].reshape([1, 1, 144]),
                                     pred.surf_vars['pm25'][:,:,:,:].reshape([1, 1, 144]),
-                                    pred.surf_vars['so2'][:,:,:,:].reshape([1, 1, 144]), 
-                                    pred.surf_vars['no2'][:,:,:,:].reshape([1, 1, 144]), 
+                                    pred.surf_vars['so2'][:,:,:,:].reshape([1, 1, 144]),
+                                    pred.surf_vars['no2'][:,:,:,:].reshape([1, 1, 144]),
                                     pred.surf_vars['o3'][:,:,:,:].reshape([1, 1, 144]),
                                     pred.atmos_vars['q'][:,:,:,:,:].reshape([1, 1, 144])],
                                     dim=1)
@@ -143,32 +139,28 @@ def evaluation(model, X_batch, y_batch, device):
                 plt.imshow(pred_pm25[-1])
                 plt.title("Predicted PM2.5 - Last Timestep")
                 plt.colorbar()
-                plt.savefig("pre的问题.png")
+                plt.savefig("debug_p.png")
 
-            y_tensor = torch.cat([y.surf_vars['2t'][:,:,:,:].reshape([1, 1, 144]), 
-                                y.surf_vars['pm10'][:,:,:,:].reshape([1, 1, 144]), 
+            y_tensor = torch.cat([y.surf_vars['2t'][:,:,:,:].reshape([1, 1, 144]),
+                                y.surf_vars['pm10'][:,:,:,:].reshape([1, 1, 144]),
                                 y.surf_vars['pm25'][:,:,:,:].reshape([1, 1, 144]),
-                                    y.surf_vars['so2'][:,:,:,:].reshape([1, 1, 144]), 
-                                    y.surf_vars['no2'][:,:,:,:].reshape([1, 1, 144]), 
+                                    y.surf_vars['so2'][:,:,:,:].reshape([1, 1, 144]),
+                                    y.surf_vars['no2'][:,:,:,:].reshape([1, 1, 144]),
                                     y.surf_vars['o3'][:,:,:,:].reshape([1, 1, 144]),
                                     y.atmos_vars['q'][:,:,:,:,:].reshape((1, 1, 144))],
                                     dim=1)
-            
-            # Append predictions and labels
+
             all_preds.append(pred_tensor.to(device))
             all_labels.append(y_tensor.to(device))
 
-    # Concatenate all predictions and labels
     all_preds = torch.cat(all_preds)
     all_labels = torch.cat(all_labels)
-
     mse = F.mse_loss(all_preds, all_labels)
 
-    all_preds = all_preds.cpu().detach().numpy()
-    all_labels = all_labels.cpu().detach().numpy()
-    np.save('all_preds_aurora.npy', all_preds)
-    np.save('all_labels_aurora.npy', all_labels)
-
+    # Save final evaluation results
+    np.save('final_preds.npy', all_preds.cpu().numpy())
+    np.save('final_labels.npy', all_labels.cpu().numpy())
+    
     print(f'Mean Squared Error: {mse.item()}')
 
 
@@ -231,9 +223,6 @@ if __name__ == '__main__':
     scales["no2"] = std_values['no2']
     scales["so2"] = std_values['so2']
     scales["o3"] = std_values['o3']
-    from aurora.normalisation import locations, scales
-    locations.clear()
-    scales.clear()
 
     model.load_checkpoint("microsoft/aurora", "aurora-0.25-pretrained.ckpt", strict=False)
 
