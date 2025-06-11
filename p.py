@@ -30,7 +30,7 @@ def main(model, X_batch, y_batch, device):
     model.configure_activation_checkpointing()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
-    num_epochs = 10
+    num_epochs = 1
     
     # Track losses and MSEs
     epoch_losses = []
@@ -116,6 +116,7 @@ def main(model, X_batch, y_batch, device):
 
 
 def evaluation(model, X_batch, y_batch, device):
+
     model.eval()
 
     all_preds = []
@@ -134,12 +135,7 @@ def evaluation(model, X_batch, y_batch, device):
                                     pred.surf_vars['o3'][:,:,:,:].reshape([1, 1, 144]),
                                     pred.atmos_vars['q'][:,:,:,:,:].reshape([1, 1, 144])],
                                     dim=1)
-            if i == 0:
-                pred_pm25 = pred.surf_vars['pm25'].squeeze().cpu().numpy()  # [T, H, W]
-                plt.imshow(pred_pm25[-1])
-                plt.title("Predicted PM2.5 - Last Timestep")
-                plt.colorbar()
-                plt.savefig("debug_p.png")
+
 
             y_tensor = torch.cat([y.surf_vars['2t'][:,:,:,:].reshape([1, 1, 144]),
                                 y.surf_vars['pm10'][:,:,:,:].reshape([1, 1, 144]),
@@ -156,6 +152,31 @@ def evaluation(model, X_batch, y_batch, device):
     all_preds = torch.cat(all_preds)
     all_labels = torch.cat(all_labels)
     mse = F.mse_loss(all_preds, all_labels)
+
+    # 收集某个点在所有样本中的预测/真实值变化
+    pred_point_values = []
+    true_point_values = []
+
+    for i in range(len(all_preds)):
+        # all_preds[i]: shape [1, 7, 144]
+        pred_pm25_flat = all_preds[i][0, 2].cpu().numpy()
+        true_pm25_flat = all_labels[i][0, 2].cpu().numpy()
+
+        pred_pm25 = pred_pm25_flat.reshape(12, 12)
+        true_pm25 = true_pm25_flat.reshape(12, 12)
+
+        pred_point_values.append(pred_pm25[6, 6])
+        true_point_values.append(true_pm25[6, 6])
+
+    plt.plot(pred_point_values, label="Predicted")
+    plt.plot(true_point_values, label="True")
+    plt.xlabel("Sample Index")
+    plt.ylabel("PM2.5 @ (6,6)")
+    plt.title("PM2.5 at (6,6) across batches")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("pm25_across_samples_6_6.png")
+    plt.close()
 
     # Save final evaluation results
     np.save('final_preds.npy', all_preds.cpu().numpy())
@@ -191,6 +212,7 @@ def aurora_loss(pred_batch, true_batch, reg_weight_div, lat, lon):
 
 if __name__ == '__main__':
     torch.set_num_threads(4)
+    print("X_batch[0].surf_vars['pm25'].shape")
 
     filename_weather = "5站点气象数据20231001-1231.xlsx"
     filename_airquality = "5站点202309-10月空气质量数据.xlsx"
