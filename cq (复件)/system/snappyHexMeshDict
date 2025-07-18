@@ -1,0 +1,102 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.4.x                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile {
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      snappyHexMeshDict;
+}
+
+castellatedMesh true;
+snap            true;
+addLayers       false;
+
+geometry {
+    model.stl {
+        type triSurfaceMesh;
+        name model;
+    }
+    refinementBox {
+        type searchableBox;
+        min (-50 -50 -20);
+        max (50 50 50);
+    }
+}
+
+castellatedMeshControls {
+    maxLocalCells  1000000;
+    maxGlobalCells 5000000;
+    minRefinementCells 10;
+    nCellsBetweenLevels 3;
+
+    features ( { file "model.eMesh"; level 4; } );
+
+    refinementSurfaces {
+        model {
+            level (2 3);
+            patchInfo { type wall; }
+        }
+    }
+    resolveFeatureAngle 45;
+
+    refinementRegions {
+        refinementBox { mode inside; levels ((1E15 3)); }
+    }
+
+    locationInMesh (0 0 10);
+    allowFreeStandingZoneFaces true;
+}
+
+snapControls {
+    nSmoothPatch 5;
+    tolerance 1.0;
+    nSolveIter 100;
+    nRelaxIter 5;
+    nFeatureSnapIter 10;
+}
+
+// 必须包含的段落（即使addLayers=false）
+addLayersControls {
+    relativeSizes true;
+    layers {}
+    expansionRatio 1.0;
+    finalLayerThickness 0.3;
+    minThickness 0.1;
+    nGrow 0;
+    featureAngle 60;
+    nRelaxIter 5;
+    nSmoothSurfaceNormals 1;
+    nSmoothNormals 3;
+    nSmoothThickness 2;
+    maxFaceThicknessRatio 0.5;
+    maxThicknessToMedialRatio 0.3;
+    minMedialAxisAngle 90;
+    nBufferCellsNoExtrude 0;
+    nLayerIter 50;
+}
+
+meshQualityControls {
+    maxNonOrtho 65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    maxConcave 80;
+    minFlatness 0.5;
+    minVol 1e-12;
+    minTetQuality 1e-30;
+    minArea -1;
+    minTwist 0.02;
+    minDeterminant 0.001;
+    minFaceWeight 0.02;
+    minVolRatio 0.01;
+    minTriangleTwist -1;
+    nSmoothScale 4;
+    errorReduction 0.75;
+}
+
+mergeTolerance 1E-6;
+debug 0;
