@@ -1,0 +1,20 @@
+{
+  "selected_stations": [
+    "上清寺",
+    "唐家沱",
+    "天生",
+    "龙井湾"
+  ],
+  "station_order": [
+    "上清寺",
+    "唐家沱",
+    "天生",
+    "龙井湾"
+  ],
+  "grid_mapping": {
+    "position_0_0": "上清寺",
+    "position_0_1": "唐家沱",
+    "position_1_0": "天生",
+    "position_1_1": "龙井湾"
+  }
+}
